@@ -1,4 +1,3 @@
-# main.py
 import streamlit as st
 import os
 import json
@@ -138,11 +137,20 @@ def main():
     The temporary Gradio deployment was active for 72 hours for testing and demonstration purposes.
     """)
 
-    # Display model interface screenshot
-    if os.path.exists("Gradio.png"):
-        st.image("Gradio.png", caption="Gemma Model Gradio Interface", use_container_width=True)
+    # More robust image handling
+    # Get the directory of the current script
+    current_dir = Path(__file__).parent
+    image_path = current_dir / "Gradio.png"
+    
+    if image_path.exists():
+        st.image(str(image_path), caption="Gemma Model Gradio Interface", use_container_width=True)
     else:
-        st.error("Gradio.png file not found. Please make sure it's in the same directory as main.py")
+        st.warning("Gradio interface image not available in the deployed environment.")
+        st.markdown("""
+        *The Gradio interface screenshot would normally be displayed here. 
+        It shows a user-friendly interface with input fields for prompts and 
+        response areas where the model generates text.*
+        """)
 
     # Notebook Section
     st.markdown('<div class="sub-header">Project Notebook</div>', unsafe_allow_html=True)
@@ -151,11 +159,12 @@ def main():
     You can explore the notebook content below and download it for further reference.
     """)
 
-    # Display notebook content
-    notebook_path = "Gemma3_Hugging_Face.ipynb"
-    if os.path.exists(notebook_path):
+    # More robust notebook path handling
+    notebook_path = current_dir / "Gemma3_Hugging_Face.ipynb"
+    
+    if notebook_path.exists():
         # Provide download button
-        st.markdown(get_download_link(notebook_path), unsafe_allow_html=True)
+        st.markdown(get_download_link(str(notebook_path)), unsafe_allow_html=True)
         
         # Use tabs instead of nested expanders
         tab1, tab2 = st.tabs(["Notebook Overview", "Full Notebook Content"])
@@ -175,9 +184,13 @@ def main():
             """)
         
         with tab2:
-            display_notebook(notebook_path)
+            display_notebook(str(notebook_path))
     else:
-        st.error(f"{notebook_path} not found. Please make sure it's in the same directory as main.py")
+        st.warning("Notebook file is not available in the deployed environment.")
+        st.markdown("""
+        *The Jupyter notebook would normally be displayed here. It contains the full implementation 
+        details of the Gemma model setup, configuration, and usage.*
+        """)
 
     # Deployment Challenges
     st.markdown('<div class="sub-header">Deployment Challenges</div>', unsafe_allow_html=True)
