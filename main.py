@@ -2,7 +2,9 @@ import streamlit as st
 import os
 import json
 import base64
-from pathlib import Path
+import io
+
+# ----------- FUNCTIONS ------------
 
 def display_notebook(notebook_path):
     """Read and display a Jupyter notebook file"""
@@ -10,57 +12,50 @@ def display_notebook(notebook_path):
         with open(notebook_path, 'r', encoding='utf-8') as f:
             notebook_content = json.load(f)
         
-        st.markdown("## Notebook Contents")
-        
-        # Display each cell
+        st.markdown("## 📓 Notebook Contents")
+
         for i, cell in enumerate(notebook_content.get('cells', [])):
-            # Get cell type and source
             cell_type = cell.get('cell_type', '')
             source = ''.join(cell.get('source', ''))
-            
-            # Display markdown cells directly
+
             if cell_type == 'markdown':
-                st.markdown(f"### Markdown Cell {i+1}")
-                st.markdown(source)
+                st.markdown(f"### 📝 Markdown Cell {i+1}")
+                st.markdown(source, unsafe_allow_html=True)
                 st.markdown("---")
-            
-            # Display code cells with syntax highlighting
+
             elif cell_type == 'code':
-                st.markdown(f"### Code Cell {i+1}")
+                st.markdown(f"### 💻 Code Cell {i+1}")
                 st.code(source, language='python')
-                
-                # Display outputs if they exist
+
                 outputs = cell.get('outputs', [])
                 if outputs:
-                    st.markdown("**Output:**")
+                    st.markdown("**🔽 Output:**")
                     for output in outputs:
-                        if 'text' in output:
+                        if output.get('output_type') == 'error':
+                            st.error("⚠️ Error in Code Execution:")
+                            st.text('\n'.join(output.get('traceback', [])))
+                        elif 'text' in output:
                             st.text(''.join(output['text']))
                         elif 'data' in output:
                             data = output['data']
                             if 'text/plain' in data:
                                 st.code(''.join(data['text/plain']), language='python')
                             if 'image/png' in data:
-                                image_data = data['image/png']
-                                st.image(f"data:image/png;base64,{image_data}")
-                
+                                image_data = base64.b64decode(data['image/png'])
+                                st.image(io.BytesIO(image_data))
+
                 st.markdown("---")
-            
+
     except Exception as e:
         st.error(f"Error loading notebook: {str(e)}")
-        st.info("Please make sure the notebook file is in the same directory as this app.")
 
-def get_download_link(file_path):
-    """Generate a download link for a file"""
-    try:
-        with open(file_path, "rb") as f:
-            data = f.read()
-        b64 = base64.b64encode(data).decode()
-        filename = os.path.basename(file_path)
-        href = f'<a href="data:application/octet-stream;base64,{b64}" download="{filename}">Download {filename}</a>'
-        return href
-    except Exception as e:
-        return f"Error generating download link: {str(e)}"
+def show_gradio_image(image_path):
+    if os.path.exists(image_path):
+        st.image(image_path, caption="Gradio UI Snapshot", use_column_width=True)
+    else:
+        st.warning("Gradio image not found!")
+
+# ----------- UI STARTS HERE ------------
 
 def main():
     st.set_page_config(
@@ -69,7 +64,7 @@ def main():
         layout="wide"
     )
 
-    # Custom CSS for better styling
+    # Custom Styling
     st.markdown("""
     <style>
     .main-header {
@@ -83,9 +78,6 @@ def main():
         margin-top: 30px;
         margin-bottom: 15px;
     }
-    .section {
-        padding: 20px 0;
-    }
     .highlight {
         background-color: #f0f2f6;
         padding: 20px;
@@ -95,161 +87,66 @@ def main():
     </style>
     """, unsafe_allow_html=True)
 
-    # Header Section
-    st.markdown('<div class="main-header">Gemma Language Model Implementation</div>', unsafe_allow_html=True)
-    
+    # Title
+    st.markdown('<div class="main-header">Gemma Language Model Project 🚀</div>', unsafe_allow_html=True)
+
+    # Intro
     st.markdown("""
-    This project demonstrates my implementation of Google's Gemma language model for 
-    natural language processing tasks. While the full model can't be deployed permanently due to resource constraints,
-    this portfolio showcases the development process, implementation details, and results.
+    Welcome to my implementation of **Google's Gemma language model**!  
+    This app demonstrates how I fine-tuned the model, created a user interface with Gradio,  
+    and deployed it on **Hugging Face Spaces** for the world to try!
     """)
 
     # Project Overview
-    st.markdown('<div class="sub-header">Project Overview</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">📌 Project Overview</div>', unsafe_allow_html=True)
     st.markdown("""
-    The Gemma model is a state-of-the-art language model developed by Google that excels at various NLP tasks.
-    This project demonstrates how I:
-    
-    - Fine-tuned the model for specific use cases
-    - Built a user-friendly interface using Gradio
-    - Evaluated performance and optimized for better results
-    - Addressed deployment challenges with resource-intensive models
+    - ✅ Fine-tuned Gemma on custom dataset  
+    - 🧠 Built an interactive UI using Gradio  
+    - 🚀 Deployed on Hugging Face Spaces  
+    - 💡 Optimized model performance and inference  
     """)
 
-    # Implementation Details
-    st.markdown('<div class="sub-header">Implementation Details</div>', unsafe_allow_html=True)
-    
-    st.markdown("""
-    The implementation uses Google's Gemma model, which requires significant computational resources.
-    The model was set up in Google Colab with GPU acceleration to handle the resource requirements.
-    
-    Key components:
-    - Model initialization and configuration
-    - Custom preprocessing pipeline
-    - Integration with Gradio for the user interface
-    - Optimization techniques for improved performance
-    """)
-
-    # Demonstration Section
-    st.markdown('<div class="sub-header">Model Demonstration</div>', unsafe_allow_html=True)
-    st.markdown("""
-    Below is a screenshot of the working application deployed on Gradio. 
-    The temporary Gradio deployment was active for 72 hours for testing and demonstration purposes.
-    """)
-
-    # More robust image handling
-    # Get the directory of the current script
-    current_dir = Path(__file__).parent
-    image_path = current_dir / "Gradio.png"
-    
-    if image_path.exists():
-        st.image(str(image_path), caption="Gemma Model Gradio Interface", use_container_width=True)
+    # Notebook Display
+    st.markdown('<div class="sub-header">📘 Gemma Notebook (Jupyter)</div>', unsafe_allow_html=True)
+    notebook_path = "Gemma3_Hugging_Face.ipynb"
+    if os.path.exists(notebook_path):
+        display_notebook(notebook_path)
     else:
-        st.warning("Gradio interface image not available in the deployed environment.")
-        st.markdown("""
-        *The Gradio interface screenshot would normally be displayed here. 
-        It shows a user-friendly interface with input fields for prompts and 
-        response areas where the model generates text.*
-        """)
+        st.error("Notebook file not found.")
 
-    # Notebook Section
-    st.markdown('<div class="sub-header">Project Notebook</div>', unsafe_allow_html=True)
+    # Gradio UI Image
+    st.markdown('<div class="sub-header">🎨 Gradio UI Snapshot</div>', unsafe_allow_html=True)
+    show_gradio_image("Gradio.png")
+
+    # Deployment Guide
+    st.markdown('<div class="sub-header">🚀 How to Deploy on Hugging Face Spaces</div>', unsafe_allow_html=True)
     st.markdown("""
-    The complete implementation details are available in my Jupyter notebook.
-    You can explore the notebook content below and download it for further reference.
-    """)
+    <div class="highlight">
+        <ol>
+            <li><strong>Login to Hugging Face:</strong> Create an account at <a href='https://huggingface.co'>huggingface.co</a></li>
+            <li><strong>Create a New Space:</strong> Choose <code>Gradio</code> as the SDK</li>
+            <li><strong>Upload Files:</strong> Upload these:
+                <ul>
+                    <li><code>main.py</code> (this file)</li>
+                    <li><code>requirements.txt</code></li>
+                    <li><code>Gemma3_Hugging_Face.ipynb</code></li>
+                    <li><code>Gradio.png</code> (optional, for UI demo)</li>
+                </ul>
+            </li>
+            <li><strong>Set Python Environment:</strong> Hugging Face will auto-install from <code>requirements.txt</code></li>
+            <li><strong>Deploy:</strong> Click on "Commit changes" and wait 1–2 mins for the space to go live!</li>
+        </ol>
+        <p>That's it! Your NLP app is now LIVE for the world 🌍</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # More robust notebook path handling
-    notebook_path = current_dir / "Gemma3_Hugging_Face.ipynb"
-    
-    if notebook_path.exists():
-        # Provide download button
-        st.markdown(get_download_link(str(notebook_path)), unsafe_allow_html=True)
-        
-        # Use tabs instead of nested expanders
-        tab1, tab2 = st.tabs(["Notebook Overview", "Full Notebook Content"])
-        
-        with tab1:
-            st.markdown("""
-            This notebook contains a complete implementation of the Google Gemma model using Hugging Face's transformers library.
-            It includes:
-            
-            - Model setup and initialization
-            - Tokenizer configuration
-            - Inference pipeline
-            - Gradio interface implementation
-            - Performance evaluation
-            
-            Switch to the "Full Notebook Content" tab to explore the complete code and implementation details.
-            """)
-        
-        with tab2:
-            display_notebook(str(notebook_path))
-    else:
-        st.warning("Notebook file is not available in the deployed environment.")
-        st.markdown("""
-        *The Jupyter notebook would normally be displayed here. It contains the full implementation 
-        details of the Gemma model setup, configuration, and usage.*
-        """)
-
-    # Deployment Challenges
-    st.markdown('<div class="sub-header">Deployment Challenges</div>', unsafe_allow_html=True)
-    
-    st.markdown('<div class="highlight">', unsafe_allow_html=True)
+    # Outro
+    st.markdown('<div class="sub-header">📫 Connect With Me</div>', unsafe_allow_html=True)
     st.markdown("""
-    ### Why Full Deployment Wasn't Possible
-    
-    The Gemma model faces several deployment challenges that are common in large language model projects:
-    
-    1. **Resource Requirements**: The model requires significant GPU memory and computational power, making it expensive to host continuously.
-    
-    2. **Gradio's 72-Hour Limit**: Free Gradio deployments are limited to 72 hours, which doesn't allow for permanent hosting.
-    
-    3. **Cost Constraints**: Maintaining a dedicated GPU instance for continuous deployment would incur substantial monthly costs.
-    
-    4. **Alternative Solutions**: This portfolio approach allows me to showcase the project's capabilities while acknowledging practical constraints.
-    
-    These challenges represent real-world considerations in ML engineering that professionals regularly navigate.
+    - 🧑‍💻 Made with ❤️ by a passionate ML engineer  
+    - 💬 Always open to feedback, collabs, or mentorship  
+    - 📧 Reach out on [LinkedIn](https://www.linkedin.com) or [GitHub](https://github.com)
     """)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # Future Improvements
-    st.markdown('<div class="sub-header">Future Improvements & Full Deployment Plan</div>', unsafe_allow_html=True)
-    st.markdown("""
-    With additional resources, I would implement the following improvements:
-    
-    - Optimize the model for reduced memory footprint using quantization techniques
-    - Deploy on a dedicated cloud instance with GPU support
-    - Implement caching and batching for more efficient inference
-    - Create a more robust API with authentication and usage tracking
-    
-    The ideal deployment would use a service like AWS SageMaker, Google Cloud AI Platform, or a dedicated 
-    virtual machine with sufficient GPU capabilities.
-    """)
-
-    # Contact Information
-    st.markdown('<div class="sub-header">Contact & Additional Information</div>', unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("""
-        For more information about this project or to discuss how I approach machine learning challenges:
-        
-        - GitHub: [P-256](https://github.com/roboticslover)
-        - LinkedIn: [Sachin Rathore](https://www.linkedin.com/in/sachin-rathore-97776a283/)
-        """)
-    
-    with col2:
-        st.markdown("""
-        **Technologies Used:**
-        - Python
-        - PyTorch
-        - Hugging Face Transformers
-        - Google Colab
-        - Gemma Model
-        - Gradio
-        - Streamlit
-        """)
 
 if __name__ == "__main__":
     main()
